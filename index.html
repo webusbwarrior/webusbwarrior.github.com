@@ -416,7 +416,17 @@
                 // Extract filename from URL
                 isoFilename = url.split('/').pop().split('?')[0] || 'image.iso';
 
-                const response = await fetch(url);
+                // Try direct fetch first
+                let response;
+                try {
+                    response = await fetch(url, { mode: 'cors' });
+                } catch (corsError) {
+                    // If CORS fails, try with a CORS proxy
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                    status.textContent = 'Using CORS proxy...';
+                    response = await fetch(proxyUrl);
+                }
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -440,6 +450,8 @@
                         progressFill.style.width = progress + '%';
                         progressFill.textContent = progress + '%';
                         status.textContent = `Downloading: ${formatBytes(receivedLength)} / ${formatBytes(total)}`;
+                    } else {
+                        status.textContent = `Downloading: ${formatBytes(receivedLength)}`;
                     }
                 }
 
@@ -461,7 +473,14 @@
                 progressContainer.classList.remove('show');
                 
             } catch (error) {
-                showError(`Failed to download ISO: ${error.message}`);
+                let errorMsg = `Failed to download ISO: ${error.message}`;
+                if (error.message.includes('fetch')) {
+                    errorMsg += '\n\n⚠️ CORS Error: The server doesn\'t allow cross-origin downloads. Try:\n';
+                    errorMsg += '1. Use a direct download link that supports CORS\n';
+                    errorMsg += '2. Download the ISO first, then use the "Upload File" tab\n';
+                    errorMsg += '3. Use a URL from a CORS-friendly service';
+                }
+                showError(errorMsg);
                 progressContainer.classList.remove('show');
             } finally {
                 loadUrlBtn.disabled = false;
