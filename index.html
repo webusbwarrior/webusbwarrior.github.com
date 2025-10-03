@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebUSB ISO Burner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            color: #856404;
+        }
+
+        .warning strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .url-input-wrapper {
+            margin-bottom: 25px;
+        }
+
+        .url-input-wrapper label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #e9ecef;
+            border-color: #764ba2;
+        }
+
+        .file-input-label.active {
+            background: #e7e9fc;
+            border-color: #667eea;
+            border-style: solid;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e7e9fc;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .device-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7e9fc;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .device-info.show {
+            display: block;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            color: #155724;
+            text-align: center;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 10px;
+            padding: 15px;
+            color: #721c24;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .compatibility-note {
+            margin-top: 20px;
+            padding: 15px;
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            color: #0c5460;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 WebUSB ISO Burner</h1>
+        <p class="subtitle">Burn ISO images to USB drives directly from your browser</p>
+
+        <div class="warning">
+            <strong>⚠️ Warning</strong>
+            All data on the selected USB drive will be permanently erased!
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="url">Direct Link</button>
+            <button class="tab" data-tab="file">Upload File</button>
+        </div>
+
+        <div class="tab-content active" id="urlTab">
+            <div class="url-input-wrapper">
+                <label for="isoUrl">ISO Download URL</label>
+                <input type="url" 
+                       id="isoUrl" 
+                       class="url-input" 
+                       placeholder="https://example.com/image.iso">
+            </div>
+            <button class="btn btn-primary" id="loadUrlBtn">
+                Load ISO from URL
+            </button>
+        </div>
+
+        <div class="tab-content" id="fileTab">
+            <div class="file-input-wrapper">
+                <label for="isoFile" class="file-input-label" id="fileLabel">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                    <div><strong>Click to select ISO file</strong></div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">or drag and drop here</div>
+                </label>
+                <input type="file" id="isoFile" accept=".iso">
+            </div>
+        </div>
+
+        <div class="file-info" id="fileInfo"></div>
+
+        <button class="btn btn-primary" id="selectDeviceBtn" disabled>
+            Select USB Device
+        </button>
+
+        <div class="device-info" id="deviceInfo"></div>
+
+        <button class="btn btn-danger" id="burnBtn" disabled>
+            🔥 Burn ISO to USB
+        </button>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="status" id="status">Initializing...</div>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✅ ISO successfully burned to USB drive!
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="compatibility-note">
+            <strong>Note:</strong> WebUSB requires Chrome/Edge browser and HTTPS. Your browser must support the WebUSB API. This tool may not work on all systems.
+        </div>
+    </div>
+
+    <script>
+        let isoData = null;
+        let selectedDevice = null;
+        let isoFilename = '';
+
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const isoUrl = document.getElementById('isoUrl');
+        const loadUrlBtn = document.getElementById('loadUrlBtn');
+        const fileInput = document.getElementById('isoFile');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileInfo = document.getElementById('fileInfo');
+        const selectDeviceBtn = document.getElementById('selectDeviceBtn');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const burnBtn = document.getElementById('burnBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const status = document.getElementById('status');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Check WebUSB support
+        if (!navigator.usb) {
+            showError('WebUSB is not supported in this browser. Please use Chrome or Edge on a desktop computer.');
+            selectDeviceBtn.disabled = true;
+        }
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabId = tab.dataset.tab + 'Tab';
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Load from URL
+        loadUrlBtn.addEventListener('click', async () => {
+            const url = isoUrl.value.trim();
+            if (!url) {
+                showError('Please enter a valid URL.');
+                return;
+            }
+
+            try {
+                loadUrlBtn.disabled = true;
+                progressContainer.classList.add('show');
+                progressFill.style.width = '0%';
+                progressFill.textContent = '0%';
+                status.textContent = 'Downloading ISO...';
+                hideError();
+                successMessage.classList.remove('show');
+
+                // Extract filename from URL
+                isoFilename = url.split('/').pop().split('?')[0] || 'image.iso';
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentLength = response.headers.get('content-length');
+                const total = parseInt(contentLength, 10);
+                
+                const reader = response.body.getReader();
+                const chunks = [];
+                let receivedLength = 0;
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    
+                    chunks.push(value);
+                    receivedLength += value.length;
+                    
+                    if (total) {
+                        const progress = Math.floor((receivedLength / total) * 100);
+                        progressFill.style.width = progress + '%';
+                        progressFill.textContent = progress + '%';
+                        status.textContent = `Downloading: ${formatBytes(receivedLength)} / ${formatBytes(total)}`;
+                    }
+                }
+
+                const allChunks = new Uint8Array(receivedLength);
+                let position = 0;
+                for (const chunk of chunks) {
+                    allChunks.set(chunk, position);
+                    position += chunk.length;
+                }
+
+                isoData = allChunks;
+                
+                fileInfo.innerHTML = `
+                    <strong>Loaded from URL:</strong> ${isoFilename}<br>
+                    <strong>Size:</strong> ${formatBytes(isoData.length)}
+                `;
+                fileInfo.classList.add('show');
+                selectDeviceBtn.disabled = false;
+                progressContainer.classList.remove('show');
+                
+            } catch (error) {
+                showError(`Failed to download ISO: ${error.message}`);
+                progressContainer.classList.remove('show');
+            } finally {
+                loadUrlBtn.disabled = false;
+            }
+        });
+
+        // File selection
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                await handleFileSelect(file);
+            }
+        });
+
+        // Drag and drop
+        fileLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileLabel.classList.add('active');
+        });
+
+        fileLabel.addEventListener('dragleave', () => {
+            fileLabel.classList.remove('active');
+        });
+
+        fileLabel.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            fileLabel.classList.remove('active');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.iso')) {
+                await handleFileSelect(file);
+            } else {
+                showError('Please select a valid ISO file.');
+            }
+        });
+
+        async function handleFileSelect(file) {
+            try {
+                isoFilename = file.name;
+                const arrayBuffer = await file.arrayBuffer();
+                isoData = new Uint8Array(arrayBuffer);
+                
+                fileInfo.innerHTML = `
+                    <strong>Selected file:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${formatBytes(file.size)}
+                `;
+                fileInfo.classList.add('show');
+                selectDeviceBtn.disabled = false;
+                hideError();
+                successMessage.classList.remove('show');
+            } catch (error) {
+                showError(`Failed to load file: ${error.message}`);
+            }
+        }
+
+        // Select USB device
+        selectDeviceBtn.addEventListener('click', async () => {
+            try {
+                const device = await navigator.usb.requestDevice({ filters: [] });
+                selectedDevice = device;
+                
+                await device.open();
+                
+                deviceInfo.innerHTML = `
+                    <strong>Selected device:</strong><br>
+                    Vendor: ${device.vendorId} (0x${device.vendorId.toString(16)})<br>
+                    Product: ${device.productId} (0x${device.productId.toString(16)})<br>
+                    <strong style="color: #dc3545;">⚠️ All data on this device will be erased!</strong>
+                `;
+                deviceInfo.classList.add('show');
+                burnBtn.disabled = false;
+                hideError();
+            } catch (error) {
+                showError(`Failed to select device: ${error.message}`);
+            }
+        });
+
+        // Burn ISO
+        burnBtn.addEventListener('click', async () => {
+            if (!isoData || !selectedDevice) {
+                showError('Please load an ISO and select a USB device.');
+                return;
+            }
+
+            if (!confirm('WARNING: All data on the selected USB drive will be permanently erased. Continue?')) {
+                return;
+            }
+
+            try {
+                selectDeviceBtn.disabled = true;
+                loadUrlBtn.disabled = true;
+                burnBtn.disabled = true;
+                progressContainer.classList.add('show');
+                successMessage.classList.remove('show');
+                hideError();
+
+                await burnISOToDevice(isoData, selectedDevice);
+
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+                status.textContent = 'Completed!';
+                successMessage.classList.add('show');
+                
+            } catch (error) {
+                showError(`Burn failed: ${error.message}`);
+                progressContainer.classList.remove('show');
+            } finally {
+                selectDeviceBtn.disabled = false;
+                loadUrlBtn.disabled = false;
+                burnBtn.disabled = false;
+            }
+        });
+
+        async function burnISOToDevice(data, device) {
+            const BLOCK_SIZE = 64 * 1024; // 64KB blocks
+            const dataSize = data.length;
+            let offset = 0;
+
+            status.textContent = 'Preparing device...';
+            
+            // Try to claim interface and configure
+            try {
+                if (device.configuration === null) {
+                    await device.selectConfiguration(1);
+                }
+                await device.claimInterface(0);
+            } catch (error) {
+                throw new Error('Could not configure USB device. The device may not support mass storage operations.');
+            }
+
+            status.textContent = 'Writing ISO data...';
+
+            while (offset < dataSize) {
+                const chunkSize = Math.min(BLOCK_SIZE, dataSize - offset);
+                const chunk = data.slice(offset, offset + chunkSize);
+
+                // Write data to device
+                try {
+                    // Endpoint 1 OUT is commonly used for bulk transfer
+                    await device.transferOut(1, chunk);
+                } catch (error) {
+                    throw new Error(`Write failed at offset ${offset}: ${error.message}`);
+                }
+
+                offset += chunkSize;
+                const progress = Math.floor((offset / dataSize) * 100);
+                progressFill.style.width = progress + '%';
+                progressFill.textContent = progress + '%';
+                status.textContent = `Writing: ${formatBytes(offset)} / ${formatBytes(dataSize)}`;
+
+                // Allow UI to update
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            status.textContent = 'Finalizing...';
+            await device.releaseInterface(0);
+            await device.close();
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
